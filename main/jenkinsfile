@@ -1,0 +1,33 @@
+pipeline {
+    agent {
+      label 'worker'
+    }
+    options {
+            buildDiscarder(logRotator(numToKeepStr: '10'))
+            disableConcurrentBuilds()
+            timeout(time: 1, unit: 'HOURS')
+    }
+    environment {
+            AWS_DEFAULT_REGION = 'us-east-1'
+    }
+    stages {
+      stage('Git Checkout') {
+        steps {
+          checkout scm
+        }
+      }
+        stage('Build Docker Image') {
+            steps {
+                sh "eval \$(aws ecr get-login --no-include-email --region us-east-1) && sleep 2"
+                sh "cd vote && docker build . -t 635145294553.dkr.ecr.us-east-1.amazonaws.com/node-app:\${BUILD_NUMBER}"
+                sh "docker push 623396122653.dkr.ecr.us-east-1.amazonaws.com/c7-task2/node-app:\${BUILD_NUMBER}"
+            }
+        }
+        stage('Deploy in EC2') {
+            steps {
+
+                script {
+                    sh'''
+                      ssh -i  devops.pem ubuntu@34.205.101.218 && docker stop arvind412/node-app && docker run -itd -p 8080:8080 arvind412/node-app1
+                    }
+}
